@@ -52,49 +52,49 @@ source("functions_run_setup_sim.R")
 ```
 
 ```{r}
-compute_power <- function(pvals, alpha) {
-    pow <- sapply(pvals, function(pval_vec) {
-        mean(pval_vec < alpha)
+compute_results <- function(results) {
+    std_err <- sapply(results, function(results_mat) {
+        sd(results_mat["estim",])
+        # mean(results_mat["se",])
     })
     tibble(
-        sample_size = as.integer(names(pvals)),
-        power = pow
+        sample_size = as.integer(names(std_err)),
+        se = std_err
     )
 }
 
-get_results <- function(sim_results, alpha, train_sample_sizes) {
-    ## Get true power
-    pow_truth <- compute_power(sim_results$truth, alpha = alpha)
-    pow_truth <- pow_truth %>%
+get_results <- function(sim_results, train_sample_sizes) {
+    ## Truth
+    se_truth <- compute_results(sim_results$truth)
+    se_truth <- se_truth %>%
         mutate(type = "truth")
 
-    ## Get power estimates
-    pow_list_upstrap <- lapply(sim_results$estimates_upstrap, function(res_this_train_n) {
-        res <- lapply(res_this_train_n, compute_power, alpha = alpha)
+    ## Estimates
+    se_list_upstrap <- lapply(sim_results$estimates_upstrap, function(res_this_train_n) {
+        res <- lapply(res_this_train_n, compute_results)
         bind_rows(res, .id = "rep")
     })
-    names(pow_list_upstrap) <- paste("n =", train_sample_sizes)
-    pow_upstrap <- bind_rows(pow_list_upstrap, .id = "type")
-    pow_upstrap <- pow_upstrap %>%
+    names(se_list_upstrap) <- paste("n =", train_sample_sizes)
+    se_upstrap <- bind_rows(se_list_upstrap, .id = "type")
+    se_upstrap <- se_upstrap %>%
         group_by(type, sample_size) %>%
         summarize(
-            pow_min = min(power),
-            pow_p25 = quantile(power, 0.25),
-            pow_med = median(power),
-            pow_p75 = quantile(power, 0.75),
-            pow_max = max(power)
+            se_min = min(se),
+            se_p25 = quantile(se, 0.25),
+            se_med = median(se),
+            se_p75 = quantile(se, 0.75),
+            se_max = max(se)
         )
 
-    list(truth = pow_truth, upstrap = pow_upstrap)
+    list(truth = se_truth, upstrap = se_upstrap)
 }
 
 plot_results <- function(res) {
-    p <- ggplot(res$upstrap, aes(x = factor(sample_size), y = pow_med, color = type)) +
-        geom_pointrange(aes(ymin = pow_p25, ymax = pow_p75), position = position_dodge(width = 0.5)) +
-        geom_point(data = res$truth, aes(x = factor(sample_size), y = power, color = type), color = "black", size = 4) +
+    p <- ggplot(res$upstrap, aes(x = factor(sample_size), y = se_med, color = type)) +
+        geom_pointrange(aes(ymin = se_p25, ymax = se_p75), position = position_dodge(width = 0.5)) +
+        geom_point(data = res$truth, aes(x = factor(sample_size), y = se, color = type), color = "black", size = 4) +
         theme_classic() +
-        labs(x = "Sample size", y = "Power", color = "Training\nsample\nsize") +
-        coord_cartesian(ylim = c(0,1))
+        labs(x = "Target sample size", y = "Standard error", color = "Observed\nsample\nsize")
     p
 }
 ```
@@ -104,7 +104,7 @@ result_file_names <- file.path("..", "..", "data", "extdata", paste0("sim_result
 
 results_list <- lapply(seq_along(result_file_names), function(i) {
     sim_results <- read_rds(result_file_names[i])
-    results <- get_results(sim_results, alpha = 0.05, train_sample_sizes = c(1000, 2000, 4000))
+    results <- get_results(sim_results, train_sample_sizes = c(1000, 2000, 4000))
     results
 })
 
@@ -119,8 +119,16 @@ plot_list <- lapply(seq_along(result_file_names), function(i) {
 ```{r}
 num_rows <- 4
 num_cols <- 9
-pdf("../../results/power.pdf", width = num_cols*5.5, height = num_rows*3)
+pdf("../../results/results.pdf", width = num_cols*5.5, height = num_rows*3)
 do.call(grid.arrange, c(plot_list, nrow = num_rows, ncol = num_cols))
+dev.off()
+
+num_rows <- 4
+num_cols <- 3
+plot_idx_subs <- which(parameter_combos$dag_index %in% c(4,7,8))
+plot_list_subs <- plot_list[plot_idx_subs]
+pdf("../../results/results_subs.pdf", width = num_cols*5.5, height = num_rows*3)
+do.call(grid.arrange, c(plot_list_subs, nrow = num_rows, ncol = num_cols))
 dev.off()
 
 pdf("../../results/dags.pdf", width = 9, height = 9)

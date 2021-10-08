@@ -19,12 +19,6 @@ generate_sem_from_graph <- function(dag, effect_size = NULL) {
         select(-exo) %>%
         arrange(order)
 
-    # ## Obtain first edge to define exposure and outcome
-    # edge_info <- dagitty::edges(dag)
-    # index_first_edge <- which.max(edge_info$e == "->")
-    # exposure <- edge_info$v[index_first_edge]
-    # outcome <- edge_info$w[index_first_edge]
-
     ## Define exposure and outcome. Get smallest minimal adjustment set.
     ## If there is a tie for smallest, choose the first one.
     exposure <- dagitty::exposures(dag)
@@ -65,6 +59,12 @@ generate_sem_from_graph <- function(dag, effect_size = NULL) {
     sem
 }
 
+#' Simulate a dataset from a given SEM
+#' 
+#' @param sem Result from generate_sem_from_graph
+#' @param n Size of dataset to simulate
+#' @param noise_sd SD of the error term for the outcome
+#' @return A dataset arising from the supplied SEM and noise SD
 simulate_data_from_sem <- function(sem, n, noise_sd) {
     ## Argument checking
     stopifnot(all(c("exo", "endo") %in% names(sem)))

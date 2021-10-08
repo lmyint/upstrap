@@ -3,13 +3,12 @@ run_simulation <- function(dag, noise_sd, curve_sample_sizes, train_sample_sizes
     sem <- generate_sem_from_graph(dag, effect_size = 0.01)
 
     ## Generate huge superpopulation of data
-    # superpop_size <- max(curve_sample_sizes)*10
     superpop_size <- 1e6
     true_data_big <- simulate_data_from_sem(sem = sem, n = superpop_size, noise_sd = noise_sd)
 
     ## Get true versions of quantities of interest
     print(system.time({
-    truth <- get_quantities_from_data(.data = true_data_big, sample_sizes = curve_sample_sizes, iters = iters_truth)
+    truth <- get_quantities_from_data(.data = true_data_big, sample_sizes = curve_sample_sizes, iters = iters_truth, with_replacement = FALSE)
     }))
 
     ## Get upstrap estimates
@@ -17,7 +16,7 @@ run_simulation <- function(dag, noise_sd, curve_sample_sizes, train_sample_sizes
     estimates_upstrap <- lapply(train_sample_sizes, function(train_size) {
         replicate(train_reps, {
             train_data <- dplyr::slice_sample(true_data_big, n = train_size)
-            get_quantities_from_data(.data = train_data, sample_sizes = curve_sample_sizes, iters = iters_upstrap)
+            get_quantities_from_data(.data = train_data, sample_sizes = curve_sample_sizes, iters = iters_upstrap, with_replacement = TRUE)
         }, simplify = FALSE)
     })
     }))

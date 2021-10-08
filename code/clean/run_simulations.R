@@ -28,16 +28,16 @@ cat("Noise SD used:\n")
 print(this_noise_sd)
 
 set.seed(207)
-curve_sample_sizes <- seq(2000, 16000, 2000)
-train_sample_sizes <- c(1000, 2000, 4000)
+curve_sample_sizes <- seq(2000, 16000, 2000) # target sample sizes
+train_sample_sizes <- c(1000, 2000, 4000) # observed sample sizes
 sim_results <- run_simulation(
     dag = this_dag,
     noise_sd = this_noise_sd,
     curve_sample_sizes = curve_sample_sizes,
     train_sample_sizes = train_sample_sizes,
-    train_reps = 50, # originally 100
-    iters_truth = 5000, # originally 1000
-    iters_upstrap = 5000 # originally 1000
+    train_reps = 50,
+    iters_truth = 5000,
+    iters_upstrap = 5000
 )
 
 write_rds(sim_results, file = paste0("../data/sim_results", slurm_arrayid, ".rds"), compress = "gz")
